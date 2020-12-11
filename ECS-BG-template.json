@@ -1,0 +1,1947 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "ECS Service and Task Definition actions to deploy tasks to run on an ECS fargate cluster.",
+    "Metadata": {
+        "AWS::CloudFormation::Interface": {
+            "ParameterGroups": [
+                {
+                    "Label": {
+                        "default": "Parent Stacks"
+                    },
+                    "Parameters": [
+                        "ParentClusterStack",
+                        "VPC",
+                        "DNSNamespace",
+                        "ECSSecurityGroup"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Network Parameters"
+                    },
+                    "Parameters": [
+                        "FargateSubnetIds",
+                        "LoadBalancerScheme",
+                        "HealthCheckGracePeriod",
+                        "ALBSubnetIds",
+                        "ServiceDiscoveryName"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Service Parameters"
+                    },
+                    "Parameters": [
+                        "ServiceName",
+                        "DesiredCount",
+                        "ServiceAutoScaling",
+                        "MinCapacity",
+                        "MaxCapacity"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Task Definition Parameters"
+                    },
+                    "Parameters": [
+                        "ECRRepoName",
+                        "ImageTag",
+                        "TaskPolicies",
+			            "LogsRetentionInDays"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Container Parameters"
+                    },
+                    "Parameters": [
+                        "Cpu",
+                        "Memory"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Optional Parameters"
+                    },
+                    "Parameters": [
+                        "CertificateARN",
+                        "S3BucketNamePicker",
+                        "Command",
+                        "EntryPoint",
+                        "EnvironmentVariableName1",
+                        "EnvironmentVariableValue1",
+                        "EnvironmentVariableName2",
+                        "EnvironmentVariableValue2",
+                        "EnvironmentVariableName3",
+                        "EnvironmentVariableValue3",
+                        "EnvironmentVariableName4",
+                        "EnvironmentVariableValue4",
+                        "EnvironmentVariableName5",
+                        "EnvironmentVariableValue5",
+                        "VolumeName",
+                        "ContainerPath",
+                        "FileSystemID"
+                    ]
+                }
+            ],
+            "ParameterLabels": {
+                "ALBSubnetIds": {
+                    "default": "Subnets for Application LoadBalancer"
+                },
+                "ServiceDiscoveryName": {
+                    "default": "The name of the service discovery service"
+                },
+                "ParentClusterStack": {
+                    "default": "ECS Fargate Parent Cluster Stack Name"
+                },
+                "VPC": {
+                    "default": "ECS Fargate Parent Cluster VPC ID"
+                },
+                "DNSNamespace": {
+                    "default": "Private DNS namespace for ECS Fargate Cluster Instances"
+                },
+                "ECSSecurityGroup": {
+                    "default": "ECS Security Group"
+                },
+                "HealthCheckGracePeriod": {
+                    "default": "Health Check Grace Period"
+                },
+                "ECRRepoName": {
+                    "default": "ECR Repository Name"
+                },
+                "ImageTag": {
+                    "default": "Image Tags"
+                },
+                "TaskPolicies": {
+                    "default": "ECS Fargate Task Policy ARN's"
+                },
+                "LogsRetentionInDays": {
+                    "default": "Logs Retention In Days"
+                },
+                "ServiceName": {
+                    "default": "The name of your service"
+                },
+                "DesiredCount": {
+                    "default": "Desired Instances Count"
+                },
+                "ServiceAutoScaling": {
+                    "default": "Enable AutoScaling for ECS Fargate Tasks"
+                },
+                "FargateSubnetIds": {
+                    "default": "Subnets for ECS Fargate Cluster Instances"
+                },
+               
+               
+                "LoadBalancerScheme": {
+                    "default": "Load Balancer Scheme"
+                },
+
+                "MaxCapacity": {
+                    "default": "Maximum Capacity"
+                },
+                "MinCapacity": {
+                    "default": "Minimum Capacity"
+                },
+                "Cpu": {
+                    "default": "ECS Fargate task CPU units"
+                },
+                "Memory": {
+                    "default": "ECS Fargate task Memory in MiB"
+                },
+            
+                "Command": {
+                    "default": "Docker Command."
+                },
+                "EntryPoint": {
+                    "default": "Docker EntryPoint."
+                },
+                "EnvironmentVariableName1": {
+                    "default": "Environment Variable Name 1."
+                },
+                "EnvironmentVariableValue1": {
+                    "default": "Environment Variable Value 1."
+                },
+                "EnvironmentVariableName2": {
+                    "default": "Environment Variable Name 2."
+                },
+                "EnvironmentVariableValue2": {
+                    "default": "Environment Variable Value 2."
+                },
+                "EnvironmentVariableName3": {
+                    "default": "Environment Variable Name 3."
+                },
+                "EnvironmentVariableValue3": {
+                    "default": "Environment Variable Value 3."
+                },
+                "EnvironmentVariableName4": {
+                    "default": "Environment Variable Name 4."
+                },
+                "EnvironmentVariableValue4": {
+                    "default": "Environment Variable Value 4."
+                },
+                "EnvironmentVariableName5": {
+                    "default": "Environment Variable Name 5."
+                },
+                "EnvironmentVariableValue5": {
+                    "default": "Environment Variable Value 5."
+                },
+                "VolumeName": {
+                    "default": "Source Volume Name."
+                },
+                "ContainerPath": {
+                    "default": "Path inside the container"
+                },
+                "FileSystemID": {
+                    "default": "(EFS)File System ID"
+                },
+                "CertificateARN": {
+                    "default": "Certificate ARN"
+                },
+                "S3BucketNamePicker": {
+                    "default": "ELB Log Access S3 Bucket"
+                }
+            }
+        }
+    },
+    "Parameters": {
+        "ALBSubnetIds": {
+            "Type": "CommaDelimitedList",
+            "Description": "Choose two public subnets if Load Balancer should be internet-facing or private subnets if Load Balancer should be internal. Make sure to choose Subnets in different Availability Zones."
+        },
+        "ServiceDiscoveryName": {
+            "Description": "Enter a descriptive name for your service discovery service. This serves as the prefix for the DNS records that are created. For ex: webserver",
+            "Type": "String"
+        },
+        "ParentClusterStack": {
+            "Description": "Stack name of parent Cluster stack",
+            "Type": "String"
+        },
+        "VPC": {
+            "Description": "VPC ID from parent Cluster stack",
+            "Type": "String"
+        },
+        "DNSNamespace": {
+            "Type": "String",
+            "Description": "Specify the Private DNS namespace for your ECS Fargate cluster."
+        },
+        "ECSSecurityGroup": {
+            "Type": "String",
+            "Description": "Specify the ECS Security Group."
+        },
+        "HealthCheckGracePeriod": {
+            "Description": "The period of time, in seconds, that the Amazon ECS service scheduler ignores unhealthy Elastic Load Balancing target health checks after a task has first started.",
+            "Type": "Number",
+            "Default": 60,
+            "MinValue": 0,
+            "MaxValue": 1800
+        },
+        "CertificateARN": {
+            "Description": "Optional Amazon Certificate ARN. Leave it blank if you dont have one",
+            "Type": "String",
+            "Default": ""
+        },
+        "S3BucketNamePicker": {
+            "Description": "Optional S3 bucket name with Access set to ElbAccessLogWrite to store access logs.",
+            "Type": "String",
+            "Default": ""
+        },
+        "ECRRepoName": {
+            "Description": "ECR Repository Name where the Docker Image is stored.",
+            "Type": "String"
+        },
+        "ImageTag": {
+            "Description": "The image to use for a container, which is passed directly to the Docker daemon. specify other repositories Image tag (repository-url/image:tag).",
+            "Type": "String",
+            "Default": "latest"
+        },
+        "TaskPolicies": {
+            "Description": "Comma-delimited list of IAM managed policy ARNs to attach to the task IAM role",
+            "Type": "String",
+            "Default": ""
+        },
+        "LogsRetentionInDays": {
+            "Description": "Specifies the number of days you want to retain log events in the specified log group.",
+            "Type": "Number",
+            "Default": 14,
+            "AllowedValues": [
+                1,
+                3,
+                5,
+                7,
+                14,
+                30,
+                60,
+                90,
+                120,
+                150,
+                180,
+                365,
+                400,
+                545,
+                731,
+                1827,
+                3653
+            ]
+        },
+        "ServiceName": {
+            "Description": "The name of your service. Up to 255 letters (uppercase and lowercase), numbers, and hyphens are allowed. Service names must be unique within a cluster",
+            "Type": "String"
+        },
+        "DesiredCount": {
+            "Description": "The number of simultaneous tasks, which you specify by using the TaskDefinition property, that you want to run on the cluster.",
+            "Type": "Number",
+            "Default": 2,
+            "ConstraintDescription": "Must be >= 1",
+            "MinValue": 1
+        },
+        "MaxCapacity": {
+            "Description": "The maximum number of simultaneous tasks, that you want to run on the cluster.",
+            "Type": "Number",
+            "Default": 2,
+            "ConstraintDescription": "Must be >= 1",
+            "MinValue": 1
+        },
+        "MinCapacity": {
+            "Description": "The minimum number of simultaneous tasks, that you want to run on the cluster.",
+            "Type": "Number",
+            "Default": 1,
+            "ConstraintDescription": "Must be >= 1",
+            "MinValue": 1
+        },
+        "ServiceAutoScaling": {
+            "Description": "Do you want to enable auto scaling on tasks based on CPU load?",
+            "Type": "String",
+            "Default": "false",
+            "AllowedValues": [
+                "true",
+                "false"
+            ]
+        },
+        "FargateSubnetIds": {
+            "Type": "List<AWS::EC2::Subnet::Id>",
+            "Description": "Choose 2 Private Subnets for non-internet facing clusters or choose Public Subnets in different Availability Zones for public clusters."
+        },
+     
+        "LoadBalancerScheme": {
+            "Description": "Indicates whether the load balancer in front of the ECS cluster is internet-facing or internal.",
+            "Type": "String",
+            "Default": "internet-facing",
+            "AllowedValues": [
+                "internet-facing",
+                "internal"
+            ]
+        },
+
+
+        "Cpu": {
+            "Description": "The minimum number of vCPUs to reserve for the container.",
+            "Type": "String",
+            "Default": "0.25",
+            "AllowedValues": [
+                "0.25",
+                "0.5",
+                "1",
+                "2",
+                "4"
+            ]
+        },
+        "Memory": {
+            "Description": "The amount (in GB) of memory used by the task.",
+            "Type": "String",
+            "Default": "0.5",
+            "AllowedValues": [
+                "0.5",
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "7",
+                "8",
+                "9",
+                "10",
+                "11",
+                "12",
+                "13",
+                "14",
+                "15",
+                "16",
+                "17",
+                "18",
+                "19",
+                "20",
+                "21",
+                "22",
+                "23",
+                "24",
+                "25",
+                "26",
+                "27",
+                "28",
+                "29",
+                "30"
+            ]
+        },
+        "Command": {
+            "Type": "String",
+            "Description": "The Docker CMD that is passed to the container.Enter comma sepearted values.For ex: sleep,360,echo,hello . For instance: if the image is for a service, such as Apache and Rails, you would enter something like apache2,-DFOREGROUND.Leave blank if you dont have any."
+        },
+        "EntryPoint": {
+            "Type": "String",
+            "Description": "The Docker ENTRYPOINT that is passed to the container..Enter comma sepearted values.For ex: sh,-c .For instance: if any helper script is copied into the container and need to run via ENTRYPOINT on container start, you would enter something like /docker-entrypoint.sh. Leave blank if you dont have any. "
+        },
+        "EnvironmentVariableName1": {
+            "Type": "String",
+            "Description": "Name of key-value pair. For ex: mention your DB connection string name.Leave blank if you dont have any. "
+        },
+        "EnvironmentVariableValue1": {
+            "Type": "String",
+            "Description": "Value of key-value pair.Replace your service name with the ServiceDiscoveryName.Namespace.For ex: if your namespace name is local and service name is backend, the resulting DNS name for the service will be backend.local .Leave blank if you dont have any."
+        },
+        "EnvironmentVariableName2": {
+            "Type": "String",
+            "Description": "Name of key-value pair. For ex: mention your DB connection string name.Leave blank if you dont have any. "
+        },
+        "EnvironmentVariableValue2": {
+            "Type": "String",
+            "Description": "Value of key-value pair.Replace your service name with the ServiceDiscoveryName.Namespace.For ex: if your namespace name is local and service name is backend, the resulting DNS name for the service will be backend.local .Leave blank if you dont have any."
+        },
+        "EnvironmentVariableName3": {
+            "Type": "String",
+            "Description": "Name of key-value pair. For ex: mention your DB connection string name.Leave blank if you dont have any. "
+        },
+        "EnvironmentVariableValue3": {
+            "Type": "String",
+            "Description": "Value of key-value pair.Replace your service name with the ServiceDiscoveryName.Namespace.For ex: if your namespace name is local and service name is backend, the resulting DNS name for the service will be backend.local .Leave blank if you dont have any."
+        },
+        "EnvironmentVariableName4": {
+            "Type": "String",
+            "Description": "Name of key-value pair. For ex: mention your DB connection string name.Leave blank if you dont have any. "
+        },
+        "EnvironmentVariableValue4": {
+            "Type": "String",
+            "Description": "Value of key-value pair.Replace your service name with the ServiceDiscoveryName.Namespace.For ex: if your namespace name is local and service name is backend, the resulting DNS name for the service will be backend.local .Leave blank if you dont have any."
+        },
+        "EnvironmentVariableName5": {
+            "Type": "String",
+            "Description": "Name of key-value pair. For ex: mention your DB connection string name.Leave blank if you dont have any. "
+        },
+        "EnvironmentVariableValue5": {
+            "Type": "String",
+            "Description": "Value of key-value pair.Replace your service name with the ServiceDiscoveryName.Namespace.For ex: if your namespace name is local and service name is backend, the resulting DNS name for the service will be backend.local .Leave blank if you dont have any."
+        },
+        "VolumeName": {
+            "Type": "String",
+            "Description": "The name of the volume.Leave blank if you dont have any peristent workload."
+        },
+        "ContainerPath": {
+            "Type": "String",
+            "Default": "",
+            "Description": "The path on the container to mount the host volume at."
+        },
+        "FileSystemID": {
+            "Type": "String",
+            "Description": "The Amazon EFS file system ID to use."
+        }
+
+    },
+
+
+    "Transform": [
+        "AWS::CodeDeployBlueGreen"
+    ],
+    "Hooks": {
+        "CodeDeployBlueGreenHook": {
+            "Type": "AWS::CodeDeploy::BlueGreen",
+            "Properties": {
+                "TrafficRoutingConfig": {
+                    "Type": "TimeBasedCanary",
+                    "TimeBasedCanary": {
+                        "StepPercentage": 20,
+                        "BakeTimeMins": 15
+                    }
+                },
+                "AdditionalOptions": {
+                    "TerminationWaitTimeInMinutes": 30
+                },
+                "Applications": [
+                    {
+                        "Target": {
+                            "Type": "AWS::ECS::Service",
+                            "LogicalID": "Service"
+                        },
+                        "ECSAttributes": {
+                            "TaskDefinitions": [
+                                "TaskDefinitionBlue",
+                                "TaskDefinitionGreen"
+                            ],
+                            "TaskSets": [
+                                "TaskSetBlue",
+                                "TaskSetGreen"
+                            ],
+                            "TrafficRouting": {
+                                "ProdTrafficRoute": {
+                                    "Type": "AWS::ElasticLoadBalancingV2::Listener",
+                                    "LogicalID": "ProductionListener"
+                                },
+                                "TestTrafficRoute": {
+                                    "Type": "AWS::ElasticLoadBalancingV2::Listener",
+                                    "LogicalID": "TestListener"
+                                },
+                                "TargetGroups": [
+                                    "ServiceTargetGroupBlue",
+                                    "ServiceTargetGroupGreen"
+                                ]
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    "Mappings": {
+        "CpuMap": {
+            "1": {
+                "Cpu": 1024
+            },
+            "2": {
+                "Cpu": 2048
+            },
+            "4": {
+                "Cpu": 4096
+            },
+            "0.25": {
+                "Cpu": 256
+            },
+            "0.5": {
+                "Cpu": 512
+            }
+        },
+        "MemoryMap": {
+            "1": {
+                "Memory": 1024
+            },
+            "2": {
+                "Memory": 2048
+            },
+            "3": {
+                "Memory": 3072
+            },
+            "4": {
+                "Memory": 4096
+            },
+            "5": {
+                "Memory": 5120
+            },
+            "6": {
+                "Memory": 6144
+            },
+            "7": {
+                "Memory": 7168
+            },
+            "8": {
+                "Memory": 8192
+            },
+            "9": {
+                "Memory": 9216
+            },
+            "10": {
+                "Memory": 10240
+            },
+            "11": {
+                "Memory": 11264
+            },
+            "12": {
+                "Memory": 12288
+            },
+            "13": {
+                "Memory": 13312
+            },
+            "14": {
+                "Memory": 14336
+            },
+            "15": {
+                "Memory": 15360
+            },
+            "16": {
+                "Memory": 16384
+            },
+            "17": {
+                "Memory": 17408
+            },
+            "18": {
+                "Memory": 18432
+            },
+            "19": {
+                "Memory": 19456
+            },
+            "20": {
+                "Memory": 20480
+            },
+            "21": {
+                "Memory": 21504
+            },
+            "22": {
+                "Memory": 22528
+            },
+            "23": {
+                "Memory": 23552
+            },
+            "24": {
+                "Memory": 24576
+            },
+            "25": {
+                "Memory": 25600
+            },
+            "26": {
+                "Memory": 26624
+            },
+            "27": {
+                "Memory": 27648
+            },
+            "28": {
+                "Memory": 28672
+            },
+            "29": {
+                "Memory": 29696
+            },
+            "30": {
+                "Memory": 30720
+            },
+            "0.5": {
+                "Memory": 512
+            }
+        }
+    },
+    "Conditions": {
+        "HasTaskPolicies": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "TaskPolicies"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "HasLoadBalancerCertificateArn": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "CertificateARN"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+
+        "HasVolumeName": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "VolumeName"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "HasCommand": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "Command"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "HasEntryPoint": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "EntryPoint"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "HasALBSubnetIds": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Fn::Join": [
+                                ",",
+                                {
+                                    "Ref": "ALBSubnetIds"
+                                }
+                            ]
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "HasEnvironmentVariableName1": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "EnvironmentVariableName1"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "HasEnvironmentVariableName2": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "EnvironmentVariableName2"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "HasEnvironmentVariableName3": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "EnvironmentVariableName3"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "HasEnvironmentVariableName4": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "EnvironmentVariableName4"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "HasEnvironmentVariableName5": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "EnvironmentVariableName5"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "HasS3Bucket": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "S3BucketNamePicker"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "HasServiceDiscovery": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "ServiceDiscoveryName"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+    
+        "HasAutoScaling": {
+            "Fn::Equals": [
+                {
+                    "Ref": "ServiceAutoScaling"
+                },
+                "true"
+            ]
+        }
+    },
+    "Resources": {
+        
+      
+
+        "LogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+                "RetentionInDays": {
+                    "Ref": "LogsRetentionInDays"
+                }
+            }
+        },
+        "TaskExecutionRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "ecs-tasks.amazonaws.com"
+                            },
+                            "Action": "sts:AssumeRole"
+                        }
+                    ]
+                },
+                "Policies": [
+                    {
+                        "PolicyName": "AmazonECSTaskExecutionRolePolicy",
+                        "PolicyDocument": {
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "ecr:GetAuthorizationToken",
+                                        "ecr:BatchCheckLayerAvailability",
+                                        "ecr:GetDownloadUrlForLayer",
+                                        "ecr:BatchGetImage"
+                                    ],
+                                    "Resource": "*"
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "logs:CreateLogStream",
+                                        "logs:PutLogEvents"
+                                    ],
+                                    "Resource": "*"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "TaskRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "ecs-tasks.amazonaws.com"
+                            },
+                            "Action": "sts:AssumeRole"
+                        }
+                    ]
+                },
+                "ManagedPolicyArns": {
+                    "Fn::If": [
+                        "HasTaskPolicies",
+                        {
+                            "Fn::Split": [
+                                ",",
+                                {
+                                    "Ref": "TaskPolicies"
+                                }
+                            ]
+                        },
+                        {
+                            "Ref": "AWS::NoValue"
+                        }
+                    ]
+                }
+            }
+        },
+        "ALBSecurityGroup": {
+           
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "ecs-fargate-cluster-alb",
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            }
+        },
+        "ALBSecurityGroupInHttpWorld": {
+          
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "ALBSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": 80,
+                "ToPort": 80,
+                "CidrIp": "0.0.0.0/0"
+            }
+        },
+        "ALBSecurityGroupInTestWorld": {
+           
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "ALBSecurityGroup"
+                },
+                "CidrIp": "0.0.0.0/0",
+                "FromPort": 9000,
+                "IpProtocol": "tcp",
+                "ToPort": 9002
+            }
+        },
+        "ALBSecurityGroupInHttpsWorld": {
+            
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "ALBSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": 443,
+                "ToPort": 443,
+                "CidrIp": "0.0.0.0/0"
+            }
+        },
+        "ECSSecurityGroupInHttpsWorld": {
+           
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "ECSSecurityGroup"
+                },
+                "SourceSecurityGroupId": {
+                    "Ref": "ALBSecurityGroup"
+                },
+                "FromPort": 0,
+                "ToPort": 65535,
+                "IpProtocol": "tcp"
+            }
+        },
+        "SecurityGroupContainerPort": {
+           
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "ECSSecurityGroup"
+                },
+                "SourceSecurityGroupId": {
+                    "Ref": "ECSSecurityGroup"
+                },
+                "FromPort": 0,
+                "ToPort": 65535,
+                "IpProtocol": "tcp"
+            }
+        },
+        "LoadBalancer": {
+            "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+            "Properties": {
+                "LoadBalancerAttributes": [
+                    {
+                        "Key": "idle_timeout.timeout_seconds",
+                        "Value": "60"
+                    },
+                    {
+                        "Key": "routing.http2.enabled",
+                        "Value": "true"
+                    },
+                    {
+                        "Key": "access_logs.s3.enabled",
+                        "Value": {
+                            "Fn::If": [
+                                "HasS3Bucket",
+                                "true",
+                                "false"
+                            ]
+                        }
+                    },
+                    {
+                        "Fn::If": [
+                            "HasS3Bucket",
+                            {
+                                "Key": "access_logs.s3.prefix",
+                                "Value": {
+                                    "Ref": "AWS::StackName"
+                                }
+                            },
+                            {
+                                "Ref": "AWS::NoValue"
+                            }
+                        ]
+                    },
+                    {
+                        "Fn::If": [
+                            "HasS3Bucket",
+                            {
+                                "Key": "access_logs.s3.bucket",
+                                "Value": {
+                                    "Ref": "S3BucketNamePicker"
+                                }
+                            },
+                            {
+                                "Ref": "AWS::NoValue"
+                            }
+                        ]
+                    }
+                ],
+                "Scheme": {
+                    "Ref": "LoadBalancerScheme"
+                },
+
+                "SecurityGroups": [
+                    {
+                        "Ref": "ALBSecurityGroup"
+                    }
+                ],
+                "Subnets": {
+                    "Ref": "ALBSubnetIds"
+                },
+                "Type": "application"
+            }
+        },
+        "ServiceTargetGroupBlue": {
+            
+            "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+            "Properties": {
+                "HealthCheckIntervalSeconds": 30,
+                "HealthCheckPath": "/",
+                "HealthCheckProtocol": "HTTP",
+                "HealthCheckTimeoutSeconds": 10,
+                "HealthyThresholdCount": 2,
+                "UnhealthyThresholdCount": 2,
+                "Matcher": {
+                    "HttpCode": "200-299"
+                },
+                "Port": 80,
+                "Protocol": "HTTP",
+                "VpcId": {
+                    "Ref": "VPC"
+                },
+                "TargetType": "ip",
+                "TargetGroupAttributes": [
+                    {
+                        "Key": "deregistration_delay.timeout_seconds",
+                        "Value": "60"
+                    }
+                ]
+            }
+        },
+        "ServiceTargetGroupGreen": {
+            
+            "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+            "Properties": {
+                "HealthCheckIntervalSeconds": 30,
+                "HealthCheckPath": "/",
+                "HealthCheckProtocol": "HTTP",
+                "HealthCheckTimeoutSeconds": 10,
+                "HealthyThresholdCount": 2,
+                "UnhealthyThresholdCount": 2,
+                "Matcher": {
+                    "HttpCode": "200-299"
+                },
+                "Port": 80,
+                "Protocol": "HTTP",
+                "VpcId": {
+                    "Ref": "VPC"
+                },
+                "TargetType": "ip",
+                "TargetGroupAttributes": [
+                    {
+                        "Key": "deregistration_delay.timeout_seconds",
+                        "Value": "60"
+                    }
+                ]
+            }
+        },
+        "ProductionListener": {
+          
+            "Type": "AWS::ElasticLoadBalancingV2::Listener",
+            "Properties": {
+                "DefaultActions": [
+                    {
+                        "Type": "forward",
+                        "ForwardConfig": {
+                            "TargetGroups": [
+                                {
+                                    "TargetGroupArn": {
+                                        "Ref": "ServiceTargetGroupBlue"
+                                    },
+                                    "Weight": 100
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "LoadBalancerArn": {
+                    "Ref": "LoadBalancer"
+                },
+                "Port": 80,
+                "Protocol": "HTTP"
+            }
+        },
+
+        "TestListener": {
+            "Type": "AWS::ElasticLoadBalancingV2::Listener",
+            "Properties": {
+                "DefaultActions": [
+                    {
+                        "Type": "forward",
+                        "ForwardConfig": {
+                            "TargetGroups": [
+                                {
+                                    "TargetGroupArn": {
+                                        "Ref": "ServiceTargetGroupBlue"
+                                    },
+                                    "Weight": 100
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "LoadBalancerArn": {
+                    "Ref": "LoadBalancer"
+                },
+                "Port": 9000,
+                "Protocol": "HTTP"
+            }
+        },
+        "HttpsListener": {
+            "Type": "AWS::ElasticLoadBalancingV2::Listener",
+            "Condition": "HasLoadBalancerCertificateArn",
+            "Properties": {
+                "Certificates": [
+                    {
+                        "CertificateArn": {
+                            "Ref": "CertificateARN"
+                        }
+                    }
+                ],
+                "DefaultActions": [
+                    {
+                        "TargetGroupArn": {
+                            "Ref": "ServiceTargetGroupBlue"
+                        },
+                        "Type": "forward"
+                    }
+                ],
+                "LoadBalancerArn": {
+                    "Ref": "LoadBalancer"
+                },
+                "Port": 443,
+                "Protocol": "HTTPS"
+            }
+        },
+        "TaskDefinitionBlue": {
+            "Type": "AWS::ECS::TaskDefinition",
+            "Properties": {
+
+                "ContainerDefinitions": [
+                    {
+                        "Name": {
+                            "Ref": "ServiceName"
+                        },
+                        "Command": 
+                            {
+                                "Fn::If": [
+                                    "HasCommand",
+                                    
+                                    {
+                                        "Fn::Split": [
+                                            ",",
+                                            {
+                                                "Ref": "Command"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            },
+
+                        "MountPoints": [
+                            {
+                                "Fn::If": [
+                                    "HasVolumeName",
+                                    {
+                                        "SourceVolume": {
+                                            "Ref": "VolumeName"
+                                        },
+                                        "ContainerPath": {
+                                            "Ref": "ContainerPath"
+                                        }
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            }
+                        ],
+                        "Image": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "AWS::AccountId"
+                                    },
+                                    ".dkr.ecr.",
+                                    {
+                                        "Ref": "AWS::Region"
+                                    },
+                                    ".amazonaws.com/",
+                                    {
+                                        "Ref": "ECRRepoName"
+                                    },
+                                    ":",
+                                    {
+                                        "Ref": "ImageTag"
+                                    }
+                                ]
+                            ]
+                        },
+                        "EntryPoint": 
+                            {
+                                "Fn::If": [
+                                    "HasEntryPoint",
+                                    {
+                                        "Fn::Split": [
+                                            ",",
+                                            {
+                                                "Ref": "EntryPoint"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            },
+                        "PortMappings": [
+                            {
+                                "ContainerPort": 80,
+                                "Protocol": "tcp"
+                            }
+                        ],
+                        "Essential": true,
+                        "Environment": [
+                            {
+                                "Fn::If": [
+                                    "HasEnvironmentVariableName1",
+                                    {
+                                        "name": {
+                                            "Ref": "EnvironmentVariableName1"
+                                        },
+                                        "value": {
+                                            "Ref": "EnvironmentVariableValue1"
+                                        }
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            },
+                            {
+                                "Fn::If": [
+                                    "HasEnvironmentVariableName2",
+                                    {
+                                        "name": {
+                                            "Ref": "EnvironmentVariableName2"
+                                        },
+                                        "value": {
+                                            "Ref": "EnvironmentVariableValue2"
+                                        }
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            },
+                            {
+                                "Fn::If": [
+                                    "HasEnvironmentVariableName3",
+                                    {
+                                        "name": {
+                                            "Ref": "EnvironmentVariableName3"
+                                        },
+                                        "value": {
+                                            "Ref": "EnvironmentVariableValue3"
+                                        }
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            },
+                            {
+                                "Fn::If": [
+                                    "HasEnvironmentVariableName4",
+                                    {
+                                        "name": {
+                                            "Ref": "EnvironmentVariableName4"
+                                        },
+                                        "value": {
+                                            "Ref": "EnvironmentVariableValue4"
+                                        }
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            },
+                            {
+                                "Fn::If": [
+                                    "HasEnvironmentVariableName5",
+                                    {
+                                        "name": {
+                                            "Ref": "EnvironmentVariableName5"
+                                        },
+                                        "value": {
+                                            "Ref": "EnvironmentVariableValue5"
+                                        }
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            }
+                        ],
+                        "LogConfiguration": {
+                            "LogDriver": "awslogs",
+                            "Options": {
+                                "awslogs-region": {
+                                    "Ref": "AWS::Region"
+                                },
+                                "awslogs-group": {
+                                    "Ref": "LogGroup"
+                                },
+                                "awslogs-stream-prefix": {
+                                    "Ref": "AWS::StackName"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "Volumes": [
+                    {
+                        "Fn::If": [
+                            "HasVolumeName",
+                            {
+                                        "EFSVolumeConfiguration": {
+                                            "FilesystemId": {
+                                                "Ref": "FileSystemID"
+                                            },
+                                            "RootDirectory": "/"
+                                        },
+                                        "Name": {
+                                            "Ref": "VolumeName"
+                                        }
+                                    
+                                
+                            },
+                            {
+                                "Ref": "AWS::NoValue"
+                            }
+                        ]
+                    }
+                ],
+                "Cpu": {
+                    "Fn::FindInMap": [
+                        "CpuMap",
+                        {
+                            "Ref": "Cpu"
+                        },
+                        "Cpu"
+                    ]
+                },
+                "Memory": {
+                    "Fn::FindInMap": [
+                        "MemoryMap",
+                        {
+                            "Ref": "Memory"
+                        },
+                        "Memory"
+                    ]
+                },
+                "ExecutionRoleArn": {
+                    "Fn::GetAtt": [
+                        "TaskExecutionRole",
+                        "Arn"
+                    ]
+                },
+                "Family": {
+                    "Ref": "ServiceName"
+                },
+                "NetworkMode": "awsvpc",
+                "RequiresCompatibilities": [
+                    "FARGATE"
+                ],
+                "TaskRoleArn": {
+                    "Fn::GetAtt": [
+                        "TaskRole",
+                        "Arn"
+                    ]
+                }
+            }
+        },
+
+        "TaskSetBlue": {
+            "Type": "AWS::ECS::TaskSet",
+            "Properties": {
+                "Cluster": {
+                    "Ref": "ParentClusterStack"
+                },
+                "Service": {
+                    "Fn::GetAtt": [
+                        "Service",
+                        "Name"
+                    ]
+                },
+                "Scale": {
+                    "Unit": "PERCENT",
+                    "Value": 100
+                },
+                "TaskDefinition": {
+                    "Ref": "TaskDefinitionBlue"
+                },
+                "PlatformVersion": "1.4.0",
+                "LaunchType": "FARGATE",
+                "LoadBalancers": [
+                    {
+                        "ContainerName": {
+                            "Ref": "ServiceName"
+                        },
+                        "ContainerPort": 80,
+                        "TargetGroupArn": {
+                            "Ref": "ServiceTargetGroupBlue"
+                        }
+                    }
+                ],
+                "ServiceRegistries": [
+                    {
+                        "Fn::If": [
+                            "HasServiceDiscovery",
+                            {
+                        "RegistryArn": {
+                            "Fn::GetAtt": [
+                                "ServiceDiscovery",
+                                "Arn"
+                            ]
+                        }
+                    },
+                        {
+                            "Ref": "AWS::NoValue"
+                        }
+                    ]
+                    }
+                ],
+                "NetworkConfiguration": {
+                    "AwsVpcConfiguration": {
+                        "AssignPublicIp": "ENABLED",
+                        "SecurityGroups": [
+                            {
+                                "Ref": "ECSSecurityGroup"
+                            }
+                        ],
+                        "Subnets": {
+                                 "Ref": "FargateSubnetIds"
+                                       
+                                }
+                    }
+                }
+            }
+        },
+        "ServiceDiscovery": {
+            "Condition": "HasServiceDiscovery",
+            "Type": "AWS::ServiceDiscovery::Service",
+            "Properties": {
+                "Description": "Service based on a public DNS namespace",
+                "DnsConfig": {
+                    "DnsRecords": [
+                        {
+                            "Type": "A",
+                            "TTL": 60
+                        }
+                    ],
+                    "RoutingPolicy": "MULTIVALUE"
+                },
+                "Name": {
+                    "Ref": "ServiceDiscoveryName"
+                },
+                "NamespaceId": {
+                    "Ref": "DNSNamespace"
+                }
+            }
+        },
+        "Service": {
+            "Type": "AWS::ECS::Service",
+            "Properties": {
+                "ServiceName": {
+                    "Ref": "ServiceName"
+                },
+                "Cluster": {
+                    "Ref": "ParentClusterStack"
+                },
+                "DesiredCount": {
+                    "Ref": "DesiredCount"
+                },
+                "DeploymentController": {
+                    "Type": "EXTERNAL"
+                }
+            },
+            "DependsOn": [
+                "ServiceTargetGroupBlue",
+                "ServiceTargetGroupGreen",
+                "ProductionListener",
+                "TestListener"
+            ]
+        },
+
+        "PrimaryTaskSet": {
+            "Type": "AWS::ECS::PrimaryTaskSet",
+            "Properties": {
+                "Cluster": {
+                    "Ref": "ParentClusterStack"
+                },
+                "Service": {
+                    "Fn::GetAtt": [
+                        "Service",
+                        "Name"
+                    ]
+                },
+                "TaskSetId": {
+                    "Fn::GetAtt": [
+                        "TaskSetBlue",
+                        "Id"
+                    ]
+                }
+            }
+        },
+
+
+        "UnhealthyHostsAlarmBlue": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmName": {
+                    "Fn::Sub": "${AWS::StackName}-Unhealthy-Hosts-Blue"
+                },
+                "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                "EvaluationPeriods": 2,
+                "Dimensions": [
+                    {
+                        "Name": "TargetGroup",
+                        "Value": {
+                            "Fn::GetAtt": [
+                                "ServiceTargetGroupBlue",
+                                "TargetGroupFullName"
+                            ]
+                        }
+                    },
+                    {
+                        "Name": "LoadBalancer",
+                        "Value": {
+                            "Fn::GetAtt": [
+                                "LoadBalancer",
+                                "LoadBalancerFullName"
+                            ]
+                        }
+                    }
+                ],
+                "MetricName": "UnHealthyHostCount",
+                "Namespace": "AWS/ApplicationELB",
+                "Period": 300,
+                "Statistic": "Average",
+                "Threshold": 1
+            }
+        },
+        "Http5xxAlarmBlue": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmName": {
+                    "Fn::Sub": "${AWS::StackName}-Http-500-Blue"
+                },
+                "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                "EvaluationPeriods": 1,
+                "Dimensions": [
+                    {
+                        "Name": "TargetGroup",
+                        "Value": {
+                            "Fn::GetAtt": [
+                                "ServiceTargetGroupBlue",
+                                "TargetGroupFullName"
+                            ]
+                        }
+                    },
+                    {
+                        "Name": "LoadBalancer",
+                        "Value": {
+                            "Fn::GetAtt": [
+                                "LoadBalancer",
+                                "LoadBalancerFullName"
+                            ]
+                        }
+                    }
+                ],
+                "MetricName": "HTTPCode_Target_5XX_Count",
+                "Namespace": "AWS/ApplicationELB",
+                "Period": 300,
+                "Statistic": "Sum",
+                "Threshold": 1
+            }
+        },
+        "UnhealthyHostsAlarmGreen": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmName": {
+                    "Fn::Sub": "${AWS::StackName}-Unhealthy-Hosts-Green"
+                },
+                "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                "EvaluationPeriods": 2,
+                "Dimensions": [
+                    {
+                        "Name": "TargetGroup",
+                        "Value": {
+                            "Fn::GetAtt": [
+                                "ServiceTargetGroupGreen",
+                                "TargetGroupFullName"
+                            ]
+                        }
+                    },
+                    {
+                        "Name": "LoadBalancer",
+                        "Value": {
+                            "Fn::GetAtt": [
+                                "LoadBalancer",
+                                "LoadBalancerFullName"
+                            ]
+                        }
+                    }
+                ],
+                "MetricName": "UnHealthyHostCount",
+                "Namespace": "AWS/ApplicationELB",
+                "Period": 300,
+                "Statistic": "Average",
+                "Threshold": 1
+            }
+        },
+        "Http5xxAlarmGreen": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmName": {
+                    "Fn::Sub": "${AWS::StackName}-Http-500-Green"
+                },
+                "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                "EvaluationPeriods": 1,
+                "Dimensions": [
+                    {
+                        "Name": "TargetGroup",
+                        "Value": {
+                            "Fn::GetAtt": [
+                                "ServiceTargetGroupGreen",
+                                "TargetGroupFullName"
+                            ]
+                        }
+                    },
+                    {
+                        "Name": "LoadBalancer",
+                        "Value": {
+                            "Fn::GetAtt": [
+                                "LoadBalancer",
+                                "LoadBalancerFullName"
+                            ]
+                        }
+                    }
+                ],
+                "MetricName": "HTTPCode_Target_5XX_Count",
+                "Namespace": "AWS/ApplicationELB",
+                "Period": 300,
+                "Statistic": "Sum",
+                "Threshold": 1
+            }
+        },
+        "ScalableTargetRole": {
+            "Condition": "HasAutoScaling",
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "application-autoscaling.amazonaws.com"
+                            },
+                            "Action": "sts:AssumeRole"
+                        }
+                    ]
+                },
+                "Policies": [
+                    {
+                        "PolicyName": "ecsfargate",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "ecs:DescribeServices",
+                                        "ecs:UpdateService"
+                                    ],
+                                    "Resource": "*"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "PolicyName": "cloudwatch",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "cloudwatch:DescribeAlarms"
+                                    ],
+                                    "Resource": "*"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "ScalableTarget": {
+            "Condition": "HasAutoScaling",
+            "Type": "AWS::ApplicationAutoScaling::ScalableTarget",
+            "Properties": {
+                "MaxCapacity": {
+                    "Ref": "MaxCapacity"
+                },
+                "MinCapacity": {
+                    "Ref": "MinCapacity"
+                },
+                "ResourceId": {
+                    "Fn::Sub": [
+                        "service/${Cluster}/${Service}",
+                        {
+                            "Cluster": {
+                                "Ref": "ParentClusterStack"
+                            },
+                            "Service": {
+                                "Fn::GetAtt": [
+                                    "Service",
+                                    "Name"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "RoleARN": {
+                    "Fn::GetAtt": [
+                        "ScalableTargetRole",
+                        "Arn"
+                    ]
+                },
+                "ScalableDimension": "ecs:service:DesiredCount",
+                "ServiceNamespace": "ecs"
+            }
+        },
+        "ServiceScaleUpPolicy": {
+            "Condition": "HasAutoScaling",
+            "Type": "AWS::ApplicationAutoScaling::ScalingPolicy",
+            "Properties": {
+                "PolicyName": {
+                    "Fn::Sub": "${AWS::StackName}-scale-up"
+                },
+                "PolicyType": "StepScaling",
+                "ScalingTargetId": {
+                    "Ref": "ScalableTarget"
+                },
+                "StepScalingPolicyConfiguration": {
+                    "AdjustmentType": "PercentChangeInCapacity",
+                    "Cooldown": 300,
+                    "MinAdjustmentMagnitude": 1,
+                    "StepAdjustments": [
+                        {
+                            "MetricIntervalLowerBound": 0,
+                            "ScalingAdjustment": 25
+                        }
+                    ]
+                }
+            }
+        },
+        "ServiceScaleDownPolicy": {
+            "Condition": "HasAutoScaling",
+            "Type": "AWS::ApplicationAutoScaling::ScalingPolicy",
+            "Properties": {
+                "PolicyName": {
+                    "Fn::Sub": "${AWS::StackName}-scale-down"
+                },
+                "PolicyType": "StepScaling",
+                "ScalingTargetId": {
+                    "Ref": "ScalableTarget"
+                },
+                "StepScalingPolicyConfiguration": {
+                    "AdjustmentType": "PercentChangeInCapacity",
+                    "Cooldown": 300,
+                    "MinAdjustmentMagnitude": 1,
+                    "StepAdjustments": [
+                        {
+                            "MetricIntervalUpperBound": 0,
+                            "ScalingAdjustment": -25
+                        }
+                    ]
+                }
+            }
+        },
+        "CPUUtilizationHighAlarm": {
+            "Condition": "HasAutoScaling",
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmDescription": "Service is running out of CPU",
+                "Namespace": "AWS/ECS",
+                "Dimensions": [
+                    {
+                        "Name": "ClusterName",
+                        "Value": {
+                            "Ref": "ParentClusterStack"
+                        }
+                    },
+                    {
+                        "Name": "ServiceName",
+                        "Value": {
+                            "Fn::GetAtt": [
+                                "Service",
+                                "Name"
+                            ]
+                        }
+                    }
+                ],
+                "MetricName": "CPUUtilization",
+                "ComparisonOperator": "GreaterThanThreshold",
+                "Statistic": "Average",
+                "Period": 300,
+                "EvaluationPeriods": 1,
+                "Threshold": 60,
+                "AlarmActions": [
+                    {
+                        "Ref": "ServiceScaleUpPolicy"
+                    }
+                ]
+            }
+        },
+        "CPUUtilizationLowAlarm": {
+            "Condition": "HasAutoScaling",
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmDescription": "Service is wasting CPU",
+                "Namespace": "AWS/ECS",
+                "Dimensions": [
+                    {
+                        "Name": "ClusterName",
+                        "Value": {
+                            "Ref": "ParentClusterStack"
+                        }
+                    },
+                    {
+                        "Name": "ServiceName",
+                        "Value": {
+                            "Fn::GetAtt": [
+                                "Service",
+                                "Name"
+                            ]
+                        }
+                    }
+                ],
+                "MetricName": "CPUUtilization",
+                "ComparisonOperator": "LessThanThreshold",
+                "Statistic": "Average",
+                "Period": 300,
+                "EvaluationPeriods": 3,
+                "Threshold": 30,
+                "AlarmActions": [
+                    {
+                        "Ref": "ServiceScaleDownPolicy"
+                    }
+                ]
+            }
+        }
+    },
+    "Outputs": {
+
+        "ServiceURL": {
+            "Value": {
+                "Fn::Join": [
+                    "",
+                    [
+                        "http://",
+                        {
+                            "Fn::GetAtt": [
+                                "LoadBalancer",
+                                "DNSName"
+                            ]
+                        }
+                    ]
+                ]
+            }
+        },
+        "ServiceDomain": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "LoadBalancer",
+                    "DNSName"
+                ]
+            }
+        },
+        "ECSFargateServiceStack": {
+            "Description": "Stack name.",
+            "Value": {
+                "Fn::Sub": "${AWS::StackName}"
+            }
+        },
+        "ECSFargateServiceARN": {
+            "Description": "ECS Service ARN",
+            "Value": {
+                "Ref": "Service"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-ECSFargateServiceARN"
+                }
+            }
+        },
+        "ECSFargateServiceName": {
+            "Description": "ECS Fargate Service Name",
+            "Value": {
+                "Fn::GetAtt": [
+                    "Service",
+                    "Name"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-ECSFargateServiceName"
+                }
+            }
+        }
+    }
+}
