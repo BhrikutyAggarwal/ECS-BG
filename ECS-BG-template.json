@@ -33,10 +33,7 @@
                     },
                     "Parameters": [
                         "ServiceName",
-                        "DesiredCount",
-                        "ServiceAutoScaling",
-                        "MinCapacity",
-                        "MaxCapacity"
+                        "DesiredCount"
                     ]
                 },
                 {
@@ -124,9 +121,7 @@
                 "DesiredCount": {
                     "default": "Desired Instances Count"
                 },
-                "ServiceAutoScaling": {
-                    "default": "Enable AutoScaling for ECS Fargate Tasks"
-                },
+             
                 "FargateSubnetIds": {
                     "default": "Subnets for ECS Fargate Cluster Instances"
                 },
@@ -136,12 +131,7 @@
                     "default": "Load Balancer Scheme"
                 },
 
-                "MaxCapacity": {
-                    "default": "Maximum Capacity"
-                },
-                "MinCapacity": {
-                    "default": "Minimum Capacity"
-                },
+                
                 "Cpu": {
                     "default": "ECS Fargate task CPU units"
                 },
@@ -294,29 +284,8 @@
             "ConstraintDescription": "Must be >= 1",
             "MinValue": 1
         },
-        "MaxCapacity": {
-            "Description": "The maximum number of simultaneous tasks, that you want to run on the cluster.",
-            "Type": "Number",
-            "Default": 2,
-            "ConstraintDescription": "Must be >= 1",
-            "MinValue": 1
-        },
-        "MinCapacity": {
-            "Description": "The minimum number of simultaneous tasks, that you want to run on the cluster.",
-            "Type": "Number",
-            "Default": 1,
-            "ConstraintDescription": "Must be >= 1",
-            "MinValue": 1
-        },
-        "ServiceAutoScaling": {
-            "Description": "Do you want to enable auto scaling on tasks based on CPU load?",
-            "Type": "String",
-            "Default": "false",
-            "AllowedValues": [
-                "true",
-                "false"
-            ]
-        },
+        
+     
         "FargateSubnetIds": {
             "Type": "List<AWS::EC2::Subnet::Id>",
             "Description": "Choose 2 Private Subnets for non-internet facing clusters or choose Public Subnets in different Availability Zones for public clusters."
@@ -775,15 +744,6 @@
                         ""
                     ]
                 }
-            ]
-        },
-    
-        "HasAutoScaling": {
-            "Fn::Equals": [
-                {
-                    "Ref": "ServiceAutoScaling"
-                },
-                "true"
             ]
         }
     },
@@ -1677,214 +1637,8 @@
                 "Statistic": "Sum",
                 "Threshold": 1
             }
-        },
-        "ScalableTargetRole": {
-            "Condition": "HasAutoScaling",
-            "Type": "AWS::IAM::Role",
-            "Properties": {
-                "AssumeRolePolicyDocument": {
-                    "Version": "2012-10-17",
-                    "Statement": [
-                        {
-                            "Effect": "Allow",
-                            "Principal": {
-                                "Service": "application-autoscaling.amazonaws.com"
-                            },
-                            "Action": "sts:AssumeRole"
-                        }
-                    ]
-                },
-                "Policies": [
-                    {
-                        "PolicyName": "ecsfargate",
-                        "PolicyDocument": {
-                            "Version": "2012-10-17",
-                            "Statement": [
-                                {
-                                    "Effect": "Allow",
-                                    "Action": [
-                                        "ecs:DescribeServices",
-                                        "ecs:UpdateService"
-                                    ],
-                                    "Resource": "*"
-                                }
-                            ]
-                        }
-                    },
-                    {
-                        "PolicyName": "cloudwatch",
-                        "PolicyDocument": {
-                            "Version": "2012-10-17",
-                            "Statement": [
-                                {
-                                    "Effect": "Allow",
-                                    "Action": [
-                                        "cloudwatch:DescribeAlarms"
-                                    ],
-                                    "Resource": "*"
-                                }
-                            ]
-                        }
-                    }
-                ]
-            }
-        },
-        "ScalableTarget": {
-            "Condition": "HasAutoScaling",
-            "Type": "AWS::ApplicationAutoScaling::ScalableTarget",
-            "Properties": {
-                "MaxCapacity": {
-                    "Ref": "MaxCapacity"
-                },
-                "MinCapacity": {
-                    "Ref": "MinCapacity"
-                },
-                "ResourceId": {
-                    "Fn::Sub": [
-                        "service/${Cluster}/${Service}",
-                        {
-                            "Cluster": {
-                                "Ref": "ParentClusterStack"
-                            },
-                            "Service": {
-                                "Fn::GetAtt": [
-                                    "Service",
-                                    "Name"
-                                ]
-                            }
-                        }
-                    ]
-                },
-                "RoleARN": {
-                    "Fn::GetAtt": [
-                        "ScalableTargetRole",
-                        "Arn"
-                    ]
-                },
-                "ScalableDimension": "ecs:service:DesiredCount",
-                "ServiceNamespace": "ecs"
-            }
-        },
-        "ServiceScaleUpPolicy": {
-            "Condition": "HasAutoScaling",
-            "Type": "AWS::ApplicationAutoScaling::ScalingPolicy",
-            "Properties": {
-                "PolicyName": {
-                    "Fn::Sub": "${AWS::StackName}-scale-up"
-                },
-                "PolicyType": "StepScaling",
-                "ScalingTargetId": {
-                    "Ref": "ScalableTarget"
-                },
-                "StepScalingPolicyConfiguration": {
-                    "AdjustmentType": "PercentChangeInCapacity",
-                    "Cooldown": 300,
-                    "MinAdjustmentMagnitude": 1,
-                    "StepAdjustments": [
-                        {
-                            "MetricIntervalLowerBound": 0,
-                            "ScalingAdjustment": 25
-                        }
-                    ]
-                }
-            }
-        },
-        "ServiceScaleDownPolicy": {
-            "Condition": "HasAutoScaling",
-            "Type": "AWS::ApplicationAutoScaling::ScalingPolicy",
-            "Properties": {
-                "PolicyName": {
-                    "Fn::Sub": "${AWS::StackName}-scale-down"
-                },
-                "PolicyType": "StepScaling",
-                "ScalingTargetId": {
-                    "Ref": "ScalableTarget"
-                },
-                "StepScalingPolicyConfiguration": {
-                    "AdjustmentType": "PercentChangeInCapacity",
-                    "Cooldown": 300,
-                    "MinAdjustmentMagnitude": 1,
-                    "StepAdjustments": [
-                        {
-                            "MetricIntervalUpperBound": 0,
-                            "ScalingAdjustment": -25
-                        }
-                    ]
-                }
-            }
-        },
-        "CPUUtilizationHighAlarm": {
-            "Condition": "HasAutoScaling",
-            "Type": "AWS::CloudWatch::Alarm",
-            "Properties": {
-                "AlarmDescription": "Service is running out of CPU",
-                "Namespace": "AWS/ECS",
-                "Dimensions": [
-                    {
-                        "Name": "ClusterName",
-                        "Value": {
-                            "Ref": "ParentClusterStack"
-                        }
-                    },
-                    {
-                        "Name": "ServiceName",
-                        "Value": {
-                            "Fn::GetAtt": [
-                                "Service",
-                                "Name"
-                            ]
-                        }
-                    }
-                ],
-                "MetricName": "CPUUtilization",
-                "ComparisonOperator": "GreaterThanThreshold",
-                "Statistic": "Average",
-                "Period": 300,
-                "EvaluationPeriods": 1,
-                "Threshold": 60,
-                "AlarmActions": [
-                    {
-                        "Ref": "ServiceScaleUpPolicy"
-                    }
-                ]
-            }
-        },
-        "CPUUtilizationLowAlarm": {
-            "Condition": "HasAutoScaling",
-            "Type": "AWS::CloudWatch::Alarm",
-            "Properties": {
-                "AlarmDescription": "Service is wasting CPU",
-                "Namespace": "AWS/ECS",
-                "Dimensions": [
-                    {
-                        "Name": "ClusterName",
-                        "Value": {
-                            "Ref": "ParentClusterStack"
-                        }
-                    },
-                    {
-                        "Name": "ServiceName",
-                        "Value": {
-                            "Fn::GetAtt": [
-                                "Service",
-                                "Name"
-                            ]
-                        }
-                    }
-                ],
-                "MetricName": "CPUUtilization",
-                "ComparisonOperator": "LessThanThreshold",
-                "Statistic": "Average",
-                "Period": 300,
-                "EvaluationPeriods": 3,
-                "Threshold": 30,
-                "AlarmActions": [
-                    {
-                        "Ref": "ServiceScaleDownPolicy"
-                    }
-                ]
-            }
         }
+        
     },
     "Outputs": {
 
